@@ -1,163 +1,69 @@
+from __future__ import annotations
+
 from typing import Any, Callable
 
-from homeassistant.components.number import NumberMode
-from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.number import NumberEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, UnitOfPower, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import ECOFLOW_DOMAIN
-from .api import EcoflowApiClient, Message
-from .devices import BaseDevice
-from .entities import BaseNumberEntity
+from .const import DOMAIN, AVAILABILITY_STALE_SECONDS
 
 
-async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
-):
-    client: EcoflowApiClient = hass.data[ECOFLOW_DOMAIN][entry.entry_id]
-    for sn, device in client.devices.items():
-        async_add_entities(device.numbers(client))
+NUMBER_KEYS: dict[str, tuple[str, str, float, float, float]] = {
+    # key: (name, setter_method, min, max, step)
+    "number.ac_charge_power": ("AC Charge Power", "set_ac_charge_power", 0.0, 1200.0, 50.0),
+    "number.min_soc": ("Minimum SoC", "set_min_soc", 0.0, 100.0, 1.0),
+}
 
 
-class ValueUpdateEntity(BaseNumberEntity):
-    _attr_native_step = 1
-    _attr_mode = NumberMode.SLIDER
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+    store = hass.data[DOMAIN][entry.entry_id]
+    coord = store["coordinator"]
+    options = store.get("options", {})
+    controls_enabled = bool(options.get("enable_controls_v3", False))
 
-    async def async_set_native_value(self, value: float):
-        if self._command:
-            ival = int(value)
-            self.send_set_message(ival, self.command_dict(ival))
+    entities = []
+    for key, (name, method, vmin, vmax, step) in NUMBER_KEYS.items():
+        setter = getattr(coord, method) if controls_enabled else None
+        entities.append(_SimpleNumber(entry.entry_id, key, name, setter, vmin, vmax, step, coord))
 
+    def _on_state(state: dict[str, Any]) -> None:
+        for ent in entities:
+            ent.receive_state(state)
 
-class ChargingPowerEntity(ValueUpdateEntity):
-    _attr_icon = "mdi:transmission-tower-import"
-    _attr_native_unit_of_measurement = UnitOfPower.WATT
-    _attr_device_class = SensorDeviceClass.POWER
-
-    def __init__(
-        self,
-        client: EcoflowApiClient,
-        device: BaseDevice,
-        mqtt_key: str,
-        title: str,
-        min_value: int,
-        max_value: int,
-        command: Callable[[int], dict[str, Any] | Message]
-        | Callable[[int, dict[str, Any]], dict[str, Any] | Message]
-        | None,
-        enabled: bool = True,
-        auto_enable: bool = False,
-    ):
-        super().__init__(
-            client,
-            device,
-            mqtt_key,
-            title,
-            min_value,
-            max_value,
-            command,
-            enabled,
-            auto_enable,
-        )
-        self._attr_native_step = self._device.charging_power_step()
+    coord.on_state(_on_state)
+    async_add_entities(entities)
 
 
-class DeciChargingPowerEntity(ChargingPowerEntity):
-    _attr_mode = NumberMode.BOX
+class _SimpleNumber(NumberEntity):
+    _attr_has_entity_name = True
 
-    def _update_value(self, val: Any) -> bool:
-        return super()._update_value(int(val) / 10)
+    def __init__(self, entry_id: str, key: str, name: str, setter: Callable[[float], None] | None, vmin: float, vmax: float, step: float, coord) -> None:
+        self._key = key
+        self._attr_name = name
+        self._attr_unique_id = f"{entry_id}-{key}"
+        self._setter = setter
+        self._attr_native_min_value = vmin
+        self._attr_native_max_value = vmax
+        self._attr_native_step = step
+        self._state: float | None = None
+        self._coord = coord
 
-    async def async_set_native_value(self, value: float):
-        if self._command:
-            ival = int(value * 10)
-            self.send_set_message(ival, self.command_dict(ival))
+    @property
+    def native_value(self) -> float | None:
+        return self._state
 
+    async def async_set_native_value(self, value: float) -> None:
+        if self._setter:
+            self._setter(value)
 
-class AcChargingPowerInAmpereEntity(ValueUpdateEntity):
-    _attr_mode = NumberMode.BOX
-    _attr_native_step = 1
+    def receive_state(self, state: dict[str, Any]) -> None:
+        if self._key in state:
+            self._state = state[self._key]
+            self.async_write_ha_state()
 
-    def _update_value(self, val: Any) -> bool:
-        return super()._update_value(int(val))
+    @property
+    def available(self) -> bool:
+        return self._coord.seconds_since_update() <= AVAILABILITY_STALE_SECONDS
 
-    async def async_set_native_value(self, value: int):
-        if self._command:
-            self.send_set_message(value, self.command_dict(value))
-
-
-class MinMaxLevelEntity(ValueUpdateEntity):
-    def __init__(
-        self,
-        client: EcoflowApiClient,
-        device: BaseDevice,
-        mqtt_key: str,
-        title: str,
-        min_value: int,
-        max_value: int,
-        command: Callable[[int], dict[str, Any] | Message]
-        | Callable[[int, dict[str, Any]], dict[str, Any] | Message]
-        | None,
-    ):
-        super().__init__(
-            client, device, mqtt_key, title, min_value, max_value, command, True, False
-        )
-
-
-class BrightnessLevelEntity(MinMaxLevelEntity):
-    _attr_icon = "mdi:brightness-6"
-    _attr_native_unit_of_measurement = PERCENTAGE
-
-
-class BatteryBackupLevel(MinMaxLevelEntity):
-    _attr_icon = "mdi:battery-charging-90"
-    _attr_native_unit_of_measurement = PERCENTAGE
-
-    def __init__(
-        self,
-        client: EcoflowApiClient,
-        device: BaseDevice,
-        mqtt_key: str,
-        title: str,
-        min_value: int,
-        max_value: int,
-        min_key: str,
-        max_key: str,
-        command: Callable[[int], dict[str, Any]] | None,
-    ):
-        super().__init__(client, device, mqtt_key, title, min_value, max_value, command)
-        self._min_key = min_key
-        self._max_key = max_key
-
-    def _updated(self, data: dict[str, Any]):
-        if self._min_key in data:
-            self._attr_native_min_value = int(data[self._min_key]) + 5  # min + 5%
-        if self._max_key in data:
-            self._attr_native_max_value = int(data[self._max_key])
-        super()._updated(data)
-
-
-class LevelEntity(ValueUpdateEntity):
-    _attr_native_unit_of_measurement = PERCENTAGE
-
-
-class MinBatteryLevelEntity(LevelEntity):
-    _attr_icon = "mdi:battery-charging-10"
-
-
-class MaxBatteryLevelEntity(LevelEntity):
-    _attr_icon = "mdi:battery-charging-90"
-
-
-class MinGenStartLevelEntity(LevelEntity):
-    _attr_icon = "mdi:engine"
-
-
-class MaxGenStopLevelEntity(LevelEntity):
-    _attr_icon = "mdi:engine-off"
-
-
-class SetTempEntity(ValueUpdateEntity):
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS

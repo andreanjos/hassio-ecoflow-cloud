@@ -1,35 +1,22 @@
-from datetime import timedelta
+from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
+from typing import Any
+
 from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
 
-from . import ECOFLOW_DOMAIN
-from .api import EcoflowApiClient
-
-
-def _to_serializable(x):
-    t = type(x)
-    if t is dict:
-        x = {y: _to_serializable(x[y]) for y in x}
-    if t is timedelta:
-        x = x.__str__()
-    return x
+from .const import DOMAIN
+from .mqtt import codec_v3
 
 
-async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry):
-    client: EcoflowApiClient = hass.data[ECOFLOW_DOMAIN][entry.entry_id]
-    values = {"EcoFlow":[]}
-    for (sn, device) in client.devices.items():
-        value = {
-            'device':    device.device_info.device_type,
-            'name':      device.device_info.name,
-            'sn':        sn,
-            'params':    dict(sorted(device.data.params.items())),
-            'set':       [dict(sorted(k.items())) for k in device.data.set],
-            'set_reply': [dict(sorted(k.items())) for k in device.data.set_reply],
-            'get':       [dict(sorted(k.items())) for k in device.data.get],
-            'get_reply': [dict(sorted(k.items())) for k in device.data.get_reply],
-            'raw_data': device.data.raw_data,
-        }
-        values["EcoFlow"].append(value)
-    return values
+async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
+    storage = hass.data.get(DOMAIN, {})
+    ctx = storage.get(entry.entry_id, {})
+    coord = ctx.get("coordinator")
+    mqtt_metrics = coord._mqtt.get_metrics() if coord else {}  # type: ignore[attr-defined]
+    v3_metrics = codec_v3.get_metrics()
+    return {
+        "mqtt": mqtt_metrics,
+        "v3": v3_metrics,
+    }
+

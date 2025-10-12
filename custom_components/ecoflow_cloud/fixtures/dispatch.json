@@ -1,0 +1,5 @@
+{
+  "10,20": "ecoflow.v3.InverterOut",
+  "11,1": "ecoflow.v3.BmsHeartbeat"
+}
+
