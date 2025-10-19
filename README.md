@@ -6,6 +6,9 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 [![HACS validation](https://github.com/tolwi/hassio-ecoflow-cloud/workflows/Validate%20with%20hassfest%20and%20HACS/badge.svg)](https://github.com/tolwi/hassio-ecoflow-cloud/actions?query=workflow:"Validate%20with%20hassfest%20and%20HACS")
 
+## 🚀 **NEW: River 3 Plus Support!**
+This integration now includes **full support for EcoFlow River 3 Plus devices** with v3 protobuf communication, providing comprehensive monitoring and control capabilities.
+
 Inspired by [hassio-ecoflow](https://github.com/vwt12eh8/hassio-ecoflow) and [ecoflow-mqtt-prometheus-exporter](https://github.com/berezhinskiy/ecoflow-mqtt-prometheus-exporter) this integration uses EcoFlow MQTT Broker `mqtt.ecoflow.com` to monitor and control the device.
 
 ## Installation
@@ -21,6 +24,66 @@ Once installed, use Add Integration -> Ecoflow Cloud.
 
 ## Current state
 ### Devices available with private_api
+
+<details><summary> 🆕 RIVER_3_PLUS <i>(sensors: 25, switches: 5, sliders: 4, selects: 5)</i> </summary>
+<p>
+
+*Sensors*
+- Main Battery Level
+- Main Design Capacity  _(disabled)_
+- Main Full Capacity  _(disabled)_
+- Main Remain Capacity  _(disabled)_
+- State of Health
+- Battery Level
+- Battery Charging State
+- Total In Power
+- Total Out Power
+- Solar In Current
+- Solar In Voltage
+- AC In Power
+- AC Out Power
+- AC In Volts
+- AC Out Volts
+- Type-C In Power
+- Solar In Power
+- DC Out Power
+- Type-C Out Power
+- USB Out Power
+- Charge Remaining Time
+- Discharge Remaining Time
+- Remaining Time
+- Inv Out Temperature
+- Cycles
+- Battery Temperature
+- Min Cell Temperature  _(disabled)_
+- Max Cell Temperature  _(disabled)_
+- Battery Volts  _(disabled)_
+- Min Cell Volts  _(disabled)_
+- Max Cell Volts  _(disabled)_
+- Status
+
+*Switches*
+- AC Enabled 
+- AC Always On 
+- X-Boost Enabled 
+- DC (12V) Enabled 
+- Backup Reserve Enabled 
+
+*Sliders (numbers)*
+- Max Charge Level 
+- Min Discharge Level 
+- AC Charging Power 
+- Backup Reserve Level 
+
+*Selects*
+- DC (12V) Charge Current 
+- DC Mode 
+- Screen Timeout 
+- Unit Timeout 
+- AC Timeout 
+
+</p></details>
+
 <details><summary> DELTA_2 <i>(sensors: 45, switches: 8, sliders: 6, selects: 5)</i> </summary>
 <p>
 
@@ -1178,6 +1241,66 @@ Once installed, use Add Integration -> Ecoflow Cloud.
 </p></details>
 
 ### Devices available with public_api
+
+<details><summary> 🆕 RIVER 3 Plus (API) <i>(sensors: 25, switches: 5, sliders: 4, selects: 5)</i> </summary>
+<p>
+
+*Sensors*
+- Main Battery Level
+- Main Design Capacity  _(disabled)_
+- Main Full Capacity  _(disabled)_
+- Main Remain Capacity  _(disabled)_
+- State of Health
+- Battery Level
+- Battery Charging State
+- Total In Power
+- Total Out Power
+- Solar In Current
+- Solar In Voltage
+- AC In Power
+- AC Out Power
+- AC In Volts
+- AC Out Volts
+- Type-C In Power
+- Solar In Power
+- DC Out Power
+- Type-C Out Power
+- USB Out Power
+- Charge Remaining Time
+- Discharge Remaining Time
+- Remaining Time
+- Inv Out Temperature
+- Cycles
+- Battery Temperature
+- Min Cell Temperature  _(disabled)_
+- Max Cell Temperature  _(disabled)_
+- Battery Volts  _(disabled)_
+- Min Cell Volts  _(disabled)_
+- Max Cell Volts  _(disabled)_
+- Status
+
+*Switches*
+- AC Enabled 
+- AC Always On 
+- X-Boost Enabled 
+- DC (12V) Enabled 
+- Backup Reserve Enabled 
+
+*Sliders (numbers)*
+- Max Charge Level 
+- Min Discharge Level 
+- AC Charging Power 
+- Backup Reserve Level 
+
+*Selects*
+- DC (12V) Charge Current 
+- DC Mode 
+- Screen Timeout 
+- Unit Timeout 
+- AC Timeout 
+
+</p></details>
+
 <details><summary> DELTA Max (API) <i>(sensors: 70, switches: 7, sliders: 5, selects: 0)</i> </summary>
 <p>
 
