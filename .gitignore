@@ -1,10 +1,40 @@
-__pycache__
-venv
-.idea
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
 .DS_Store
-.vscode/settings.json
-.coverage
-requirements.test.txt
-requirements.txt
-setup.cfg
-tests
+Thumbs.db
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Test files
+test_*.py
+*_test.py
+debug*.py
+simple_test.py
+
+# Diagnostic files (may contain personal data)
+diag/
+*.json
+!hacs.json
+!manifest.json
+!**/translations/*.json
+
+# Personal config files
+config.json
+config_multi.json
