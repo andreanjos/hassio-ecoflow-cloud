@@ -49,7 +49,28 @@ def to_plain(raw_data: dict[str, any]) -> dict[str, any]:
             for k2, v2 in v.items():
                 new_params2[f"{k}.{k2}"] = v2
 
-    result = {"params": new_params2, "raw_data": raw_data}
+    result: dict[str, any] = {"params": new_params2, "raw_data": raw_data}
+
+    # Preserve the module serial number and any other metadata that the
+    # data holder relies on to route payloads to the right device.
+    #
+    # For devices that expose child modules, Home Assistant initialises the
+    # data holder with ``module_sn``.  During updates we only accept payloads
+    # whose top-level ``moduleSn`` matches that value.  The original bridge
+    # flattened the payload into ``params`` exclusively, which meant the
+    # top-level ``moduleSn`` disappeared.  As a result the update logic would
+    # ignore every message (and therefore never populate the entities),
+    # because the guard `if "moduleSn" not in raw` short-circuited.
+    #
+    # By copying the serial number – and any other commonly used metadata –
+    # back to the top level we allow the rest of the pipeline to recognise
+    # and process the payload just like the unflattened version.
+    if "moduleSn" in raw_data:
+        result["moduleSn"] = raw_data["moduleSn"]
+    if "sn" in raw_data:
+        result["sn"] = raw_data["sn"]
+    if "time" in raw_data:
+        result["time"] = raw_data["time"]
     _LOGGER.debug(str(result))
 
     return result
